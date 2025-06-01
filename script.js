@@ -1,6 +1,6 @@
 const suits = ['♠', '♥', '♦', '♣'];
 const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-
+const allCardImages = [];
 let deck = [];
 let openedIndex = 0;
 let cardsFlipped = false;
@@ -8,14 +8,46 @@ let cardsFlipped = false;
 let timerInterval = null;
 let startTime = 0;
 
+// 선로딩 함수 (페이지 로드 시 호출)
+function preloadCardImages() {
+  for (let s of suits) {
+    for (let r of ranks) {
+      const suitCode = { '♠': 'S', '♥': 'H', '♦': 'D', '♣': 'C' }[s];
+      const fileName = `${r}${suitCode}.png`;
+      const img = new Image();
+      img.src = `cards/${fileName}`;
+      allCardImages.push(img);
+    }
+  }
+  // 조커 2장도 미리 로드
+  ['JK1.png', 'JK2.png'].forEach(jokerFile => {
+    const img = new Image();
+    img.src = `cards/${jokerFile}`;
+    allCardImages.push(img);
+  });
+  // 카드 뒷면도 미리 로드
+  const backImg = new Image();
+  backImg.src = 'cards/back.png';
+  allCardImages.push(backImg);
+}
+
+// 페이지 로드 시 선로딩 시작
+window.addEventListener('load', preloadCardImages);
+
+
+
 function createDeck() {
   deck = [];
   for (let s of suits) {
     for (let r of ranks) {
-      deck.push({suit: s, rank: r});
+      deck.push({ suit: s, rank: r });
     }
   }
+  // 조커 2장 추가
+  deck.push({ suit: 'Joker', rank: 'JK1' });
+  deck.push({ suit: 'Joker', rank: 'JK2' });
 }
+
 
 function shuffleDeck() {
   for (let i = deck.length - 1; i > 0; i--) {
@@ -30,22 +62,46 @@ function renderCards(faceUp = true) {
   deck.forEach((card, idx) => {
     const cardDiv = document.createElement('div');
     cardDiv.classList.add('card');
-    cardDiv.classList.toggle('back', !faceUp);
     cardDiv.dataset.index = idx;
 
-    // 🟥 색상 지정 (♥, ♦: 빨간색 / ♠, ♣: 검정색)
-    if (card.suit === '♥' || card.suit === '♦') {
-      cardDiv.style.color = 'red';
+    if (!faceUp) {
+      // 뒷면 이미지
+      const img = document.createElement('img');
+      img.src = `cards/back.png`;
+      img.alt = 'Back';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'contain';
+      cardDiv.appendChild(img);
+      cardDiv.classList.add('back');
     } else {
-      cardDiv.style.color = 'black';
+      const img = document.createElement('img');
+      let fileName = '';
+
+      if (card.suit === 'Joker') {
+        fileName = `${card.rank}.png`; // JK1.png, JK2.png
+      } else {
+        const suitCode = { '♠': 'S', '♥': 'H', '♦': 'D', '♣': 'C' }[card.suit];
+        fileName = `${card.rank}${suitCode}.png`;
+      }
+
+      img.src = `cards/${fileName}`;
+      img.alt = `${card.rank}${card.suit}`;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'contain';
+      cardDiv.appendChild(img);
     }
 
-    cardDiv.textContent = faceUp ? `${card.rank}${card.suit}` : '';
     container.appendChild(cardDiv);
   });
 }
 
+
 function startTimer() {
+  if (timerInterval !== null) {
+    clearInterval(timerInterval);
+  }
   startTime = Date.now();
   timerInterval = setInterval(() => {
     const elapsed = Date.now() - startTime;
@@ -57,8 +113,10 @@ function startTimer() {
 }
 
 function stopTimer() {
-  clearInterval(timerInterval);
-  timerInterval = null;
+  if (timerInterval !== null) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
 }
 
 document.getElementById('startBtn').onclick = () => {
@@ -93,14 +151,24 @@ document.getElementById('openBtn').onclick = () => {
     const card = deck[openedIndex];
     const cardDiv = container.querySelector(`div[data-index="${openedIndex}"]`);
     cardDiv.classList.remove('back');
-    cardDiv.textContent = `${card.rank}${card.suit}`;
+    cardDiv.innerHTML = '';
 
-    // 🟥 색상 지정
-    if (card.suit === '♥' || card.suit === '♦') {
-      cardDiv.style.color = 'red';
+    const img = document.createElement('img');
+    let fileName = '';
+
+    if (card.suit === 'Joker') {
+      fileName = `${card.rank}.png`; // JK1.png, JK2.png
     } else {
-      cardDiv.style.color = 'black';
+      const suitCode = { '♠': 'S', '♥': 'H', '♦': 'D', '♣': 'C' }[card.suit];
+      fileName = `${card.rank}${suitCode}.png`;
     }
+
+    img.src = `cards/${fileName}`;
+    img.alt = `${card.rank}${card.suit}`;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'contain';
+    cardDiv.appendChild(img);
 
     openedIndex++;
   } else {
